@@ -1,0 +1,44 @@
+#include <ESP8266WiFi.h>
+#include <ESP8266WebServer.h>
+
+const char* ssid = "ESP8266_AP";      // SSID for the ESP8266's AP
+const char* password = "your-password"; // Password for the AP
+
+ESP8266WebServer server(80);
+
+int ledPin = D0; // Replace with the actual pin you want to control
+bool ledState = LOW;
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configure ESP8266 as an access point
+  WiFi.softAP(ssid, password);
+
+  // Route for root / web page
+  server.on("/", HTTP_GET, handleRoot);
+  // Route to control the LED (e.g., turn on and off)
+  server.on("/led", HTTP_GET, handleLedControl);
+
+  server.begin();
+  Serial.println("ESP8266 AP is up and running. Connect to Wi-Fi network: " + String(ssid));
+}
+
+void loop() {
+  server.handleClient();
+  // You can add additional logic here if needed
+}
+
+void handleRoot() {
+  // Send a basic HTML web page
+  server.send(200, "text/html", "<h1>ESP8266 Web Control</h1>");
+}
+
+void handleLedControl() {
+  // Toggle the LED state
+  ledState = !ledState;
+  digitalWrite(ledPin, ledState);
+
+  // Send a response to the mobile device
+  server.send(200, "text/plain", ledState ? "LED On" : "LED Off");
+}

@@ -1,0 +1,53 @@
+#include "esp_camera.h"
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+
+const char* ssid = "ESP32CAM_AP";      // SSID for the ESP32-CAM's AP
+const char* password = "your-password"; // Password for the AP
+
+// Create an instance of the camera module
+camera_config_t config;
+camera_fb_t *fb = NULL;
+
+// Create an instance of the web server
+AsyncWebServer server(80);
+
+void setup() {
+  Serial.begin(115200);
+
+  // Configure ESP32-CAM as an access point
+  WiFi.softAP(ssid, password);
+
+  // Initialize the camera
+  config.ledc_channel = LEDC_CHANNEL_0;
+  config.ledc_timer = LEDC_TIMER_0;
+  config.pin_d0 = 5; // Y2 GPIO5
+  config.pin_d1 = 18; // Y3 GPIO18
+  // ... Configure other camera parameters as needed
+
+  esp_err_t err = esp_camera_init(&config);
+  if (err != ESP_OK) {
+    Serial.printf("Camera init failed with error 0x%x", err);
+    return;
+  }
+
+  // Serve the video stream
+  server.on("/video", HTTP_GET, [](AsyncWebServerRequest *request){
+    fb = esp_camera_fb_get();
+    if (!fb) {
+      request->send(500, "text/plain", "Camera capture failed");
+      return;
+    }
+    request->send_P(200, "image/jpeg", fb->buf, fb->len);
+    esp_camera_fb_return(fb);
+  });
+
+  // Start the server
+  server.begin();
+
+  Serial.println("ESP32-CAM is in AP mode. Connect to Wi-Fi network: " + String(ssid));
+}
+
+void loop() {
+  // You can add additional logic here if needed
+}

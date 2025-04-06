@@ -1,0 +1,52 @@
+#include "esp_camera.h"
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <ESPAsyncWebServer.h>
+
+// Replace with your network credentials
+const char* ssid = "your_SSID";
+const char* password = "your_PASSWORD";
+
+// Create an instance of the server
+AsyncWebServer server(80);
+
+// Set up the camera module
+const int camera_pins[] = {D0, D1, D2, D3, D4, D5, D6, D7, D8, D9, D10, D11, D12, D13, D14};
+const int camera_pins_count = sizeof(camera_pins) / sizeof(camera_pins[0]);
+
+void setup() {
+  Serial.begin(115200);
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("Connected to WiFi");
+
+  // Initialize the camera
+  esp_err_t err = esp_camera_init(&camera_config);
+  if (err != ESP_OK) {
+    Serial.printf("Camera init failed with error 0x%x", err);
+    return;
+  }
+
+  // Configure the camera server
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    String html = "<html><body><img src='/stream'></body></html>";
+    request->send(200, "text/html", html);
+  });
+
+  // Stream video feed
+  server.on("/stream", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "multipart/x-mixed-replace; boundary=boundary");
+  });
+
+  // Start the server
+  server.begin();
+}
+
+void loop() {
+  // Nothing to do here
+}
